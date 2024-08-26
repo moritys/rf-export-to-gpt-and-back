@@ -1,1 +1,2 @@
-# rf-export-to-gpt-and-back
+# RedForester Plugin для обработки узлов через gpt
+
