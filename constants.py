@@ -4,16 +4,13 @@ import hashlib
 
 load_dotenv()
 
-BASE_URL = 'http://app.redforester.com/api/'
-AUTH_URL = BASE_URL + 'user'
+BASE_URL = 'http://app.redforester.com/api'
 
 USER = os.getenv('USER')
 PASSWORD = os.getenv('PASSWORD')
+HASHED_PASSWORD = hashlib.md5(PASSWORD.encode()).hexdigest()
 
+AUTH = (USER, HASHED_PASSWORD)
 
-def md5(string):
-    return hashlib.md5(string.encode('utf-8')).hexdigest()
-
-
-AUTH = (USER, md5(PASSWORD))
-HEADERS = {'Content-Type': "application/json"}
+TYPE_CATEGORY = 'ff69b91f-381c-41fa-9c1a-7aaaed7a365d'
+TYPE_NONTYPE = None
