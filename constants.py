@@ -4,7 +4,7 @@ import hashlib
 
 load_dotenv()
 
-BASE_URL = 'http://app.redforester.com/api'
+BASE_URL = 'https://app.redforester.com/api'
 
 USER = os.getenv('USER')
 PASSWORD = os.getenv('PASSWORD')
