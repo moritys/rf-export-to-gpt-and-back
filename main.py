@@ -19,6 +19,33 @@ def get_node_data(node_url):
         print("Ошибка:", response.status_code, response.text)
 
 
+def post_new_node(node_url):
+    post_url = f'{BASE_URL}/nodes'
+    map_id, _ = get_mapid_nodeid_from_link(node_url)
+    parent_id = get_node_data(node_url).get('parent')
+    body = {
+        "map_id": map_id,
+        "parent": parent_id,
+        "position": ["P", "0"],
+        "properties": {
+            "global": {
+                "title": "hello from script"
+            },
+            "byUser": [],
+            "byType": {},
+            "style": {}
+        }
+    }
+    response = requests.post(post_url, auth=AUTH, json=body)
+
+    if response.status_code == 200:
+        response_data = response.json()
+        pretty_json = json.dumps(response_data, indent=4, ensure_ascii=False)
+        print(pretty_json)
+    else:
+        print("Ошибка:", response.status_code, response.text)
+
+
 def remove_html_tags(html_text):
     '''Убирает html тэги из текста заголовков.'''
     soup = BeautifulSoup(html_text, "html.parser")
@@ -64,59 +91,70 @@ def get_text_from_single_node(node_url):
     print(remove_html_tags(title))
 
 
-def traverse(node):
+def copy_node_data(node, parent_id):
+    # Create a mirrored copy of the node under the specified parent
+    body = {
+        "map_id": node['map_id'],
+        "parent": parent_id,
+        "position": node.get('position', ["P", "0"]),
+        "properties": {
+            "global": node['body']['properties']['global'],
+            "byUser": node['body']['properties'].get('byUser', []),
+            "byType": node['body']['properties'].get('byType', {}),
+            "style": node['body']['properties'].get('style', {}),
+        }
+    }
+    response = requests.post(f'{BASE_URL}/nodes', auth=AUTH, json=body)
+    if response.status_code != 200:
+        print("Ошибка при копировании узла:", response.status_code, response.text)
+
+
+def create_text_node(node, parent_id):
+    # Create a new node with just text
+    title = node['body']['properties']['global']['title']
+    body = {
+        "map_id": node['map_id'],
+        "parent": parent_id,
+        "position": ["P", "0"],
+        "properties": {
+            "global": {
+                "title": remove_html_tags(title),
+            },
+            "byUser": [],
+            "byType": {},
+            "style": {},
+        }
+    }
+    response = requests.post(f'{BASE_URL}/nodes', auth=AUTH, json=body)
+    if response.status_code != 200:
+        print("Ошибка при создании текстового узла:", response.status_code, response.text)
+
+
+def traverse(node, parent_id):
     '''
     Собирает инфу со всей ветки и выводит заголовок.
     '''
     type_node = is_it_nontype_node(node)
     if type_node:
-        # здесь должно быть создание категорий
-        print(type_node)
-    # а здесь отправка в ии !через else!
+        copy_node_data(node, parent_id)
+    else:
+        create_text_node(node, parent_id)
     print(remove_html_tags(node['body']['properties']['global']['title']))
     print('✿══════✿══════✿══════✿══════✿══════✿')
 
     if "children" in node['body']:
         for child in node['body']['children']:
-            traverse(child)
+            traverse(child, node['id'])
 
 
-def get_data_from_parent(parent_url):
-    '''
-    1. Получаем ответ по всей ветке
-    2. Идем по узлам
-    3. Если узел не нонтайп, то копируем его ниже в ветку
-    4. Если нонтайп, сохраняем в отдельный массив
-    '''
-    mapid, nodeid = get_mapid_nodeid_from_link(parent_url)
+def get_data_from_parent(url):
+    mapid, nodeid = get_mapid_nodeid_from_link(url)
     branch_url = f'{BASE_URL}/maps/{mapid}/nodes/{nodeid}'
     response = requests.get(branch_url, auth=AUTH)
     if response.status_code == 200:
         response_data = response.json()
-    else:
-        print("Ошибка:", response.status_code, response.text)
-    # nodeid_parent = response_data.get('parent')
-    # nodes_children = response_data.get('children')
-    # nontype_dict = {}
-    traverse(response_data)
-
-
-def test_post():
-    post_url = f'{BASE_URL}/nodes/bb44c287-13ca-4aeb-934a-2234051cfd98'
-    data = {
-        "properties": {
-            "global": {
-                "title": "Test заголовок"
-            }
-        },
-    }
-    # params = {"nodeid": "6f6e8a7e-ccbe-4f3f-9f63-797a68a575e5"}
-    response = requests.post(post_url, auth=AUTH, json=data)
-
-    if response.status_code == 200:
-        response_data = response.json()
-        pretty_json = json.dumps(response_data, indent=4, ensure_ascii=False)
-        print(pretty_json)
+        # Start traversal with the initial node and its parent
+        traverse(response_data, response_data.get('parent'))
     else:
         print("Ошибка:", response.status_code, response.text)
 
