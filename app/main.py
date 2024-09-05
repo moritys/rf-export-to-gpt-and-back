@@ -1,9 +1,10 @@
 import requests
-import json
+import tkinter as tk
+from tkinter import filedialog
 from bs4 import BeautifulSoup
 import re
 
-from constants import AUTH, BASE_URL
+from app.constants import AUTH, BASE_URL
 
 
 def get_node_data(node_url):
@@ -139,6 +140,17 @@ def get_data_from_parent(url):
         print("Ошибка:", response.status_code, response.text)
 
 
+def open_and_read_file():
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+
+    if file_path:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            print(content)
+
+
 if __name__ == '__main__':
     '''
     Сценарий:
@@ -149,8 +161,11 @@ if __name__ == '__main__':
         3.2 Если узел нонтайп, берем его заголовок и кидаем в ИИ
         3.3 Если узел не нонтайп, то копируем в другую ветку
     '''
-    parent_url = input("Введите URL ветки: ")
-    print('✿══════✿══════✿══════✿══════✿══════✿')
-    get_data_from_parent(parent_url)
-    print('✿══════✿══════✿══════✿══════✿══════✿')
-    print('D O N E ✅')
+    # parent_url = input("Введите URL ветки: ")
+    # promt_file = print("Выберите файл с промтом: ")
+    # print('✿══════✿══════✿══════✿══════✿══════✿')
+    # get_data_from_parent(parent_url)
+    # print('✿══════✿══════✿══════✿══════✿══════✿')
+    # print('D O N E ✅')
+    promt_file = print("Выберите файл с промтом: ")
+    open_and_read_file()
