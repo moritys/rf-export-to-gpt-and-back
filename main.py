@@ -19,33 +19,6 @@ def get_node_data(node_url):
         print("Ошибка:", response.status_code, response.text)
 
 
-def post_new_node(node_url):
-    post_url = f'{BASE_URL}/nodes'
-    map_id, _ = get_mapid_nodeid_from_link(node_url)
-    parent_id = get_node_data(node_url).get('parent')
-    body = {
-        "map_id": map_id,
-        "parent": parent_id,
-        "position": ["P", "0"],
-        "properties": {
-            "global": {
-                "title": "hello from script"
-            },
-            "byUser": [],
-            "byType": {},
-            "style": {}
-        }
-    }
-    response = requests.post(post_url, auth=AUTH, json=body)
-
-    if response.status_code == 200:
-        response_data = response.json()
-        pretty_json = json.dumps(response_data, indent=4, ensure_ascii=False)
-        print(pretty_json)
-    else:
-        print("Ошибка:", response.status_code, response.text)
-
-
 def remove_html_tags(html_text):
     '''Убирает html тэги из текста заголовков.'''
     soup = BeautifulSoup(html_text, "html.parser")
@@ -54,9 +27,7 @@ def remove_html_tags(html_text):
 
 
 def get_mapid_nodeid_from_link(url):
-    '''
-    Достает id карты и id узла из ссылки.
-    '''
+    '''Достает id карты и id узла из ссылки.'''
     pattern = r'mapid=([a-f0-9-]+)&nodeid=([a-f0-9-]+)'
     match = re.search(pattern, url)
     if match:
@@ -69,20 +40,15 @@ def get_mapid_nodeid_from_link(url):
 
 
 def is_it_nontype_node(node):
-    '''
-    Проверяет тип узла (нонтайп или категория).
-    '''
+    '''Проверяет тип узла (нонтайп или категория).'''
     body = node.get('body')
     type_id = body.get('type_id')
     return type_id or None
 
 
 def get_text_from_single_node(node_url):
-    '''
-    Выдает инфу о конкретном узле.
-    '''
+    '''Выдает инфу о конкретном узле.'''
     response_data = get_node_data(node_url)
-
     body = response_data.get('body')
     properties = body.get('properties')
     global_f = properties.get('global')
@@ -92,11 +58,13 @@ def get_text_from_single_node(node_url):
 
 
 def copy_node_data(node, parent_id):
-    # Create a mirrored copy of the node under the specified parent
+    '''Копирует узел без изменений в нового родителя.'''
+    type_id = is_it_nontype_node(node)
     body = {
         "map_id": node['map_id'],
         "parent": parent_id,
         "position": node.get('position', ["P", "0"]),
+        "type_id": type_id,
         "properties": {
             "global": node['body']['properties']['global'],
             "byUser": node['body']['properties'].get('byUser', []),
@@ -105,20 +73,25 @@ def copy_node_data(node, parent_id):
         }
     }
     response = requests.post(f'{BASE_URL}/nodes', auth=AUTH, json=body)
-    if response.status_code != 200:
-        print("Ошибка при копировании узла:", response.status_code, response.text)
+    if response.status_code == 200:
+        return response.json().get('id')
+    else:
+        print(
+            "Ошибка при копировании узла:",
+            response.status_code, response.text
+        )
+        return None
 
 
 def create_text_node(node, parent_id):
-    # Create a new node with just text
-    title = node['body']['properties']['global']['title']
+    '''Создает нонтайп узел в новом родителе.'''
     body = {
         "map_id": node['map_id'],
         "parent": parent_id,
         "position": ["P", "0"],
         "properties": {
             "global": {
-                "title": remove_html_tags(title),
+                "title": 'это ответ ии',
             },
             "byUser": [],
             "byType": {},
@@ -126,40 +99,46 @@ def create_text_node(node, parent_id):
         }
     }
     response = requests.post(f'{BASE_URL}/nodes', auth=AUTH, json=body)
-    if response.status_code != 200:
-        print("Ошибка при создании текстового узла:", response.status_code, response.text)
+    if response.status_code == 200:
+        return response.json().get('id')
+    else:
+        print(
+            "Ошибка при создании текстового узла:",
+            response.status_code, response.text
+        )
+        return None
 
 
-def traverse(node, parent_id):
-    '''
-    Собирает инфу со всей ветки и выводит заголовок.
-    '''
+def traverse(node, new_parent_id):
+    '''Проходит по ветке и копирует ее зеркально.'''
     type_node = is_it_nontype_node(node)
     if type_node:
-        copy_node_data(node, parent_id)
+        new_node_id = copy_node_data(node, new_parent_id)
     else:
-        create_text_node(node, parent_id)
-    print(remove_html_tags(node['body']['properties']['global']['title']))
-    print('✿══════✿══════✿══════✿══════✿══════✿')
+        new_node_id = create_text_node(node, new_parent_id)
+    print(
+        f'✿ {remove_html_tags(node["body"]["properties"]["global"]["title"])} ✅'
+    )
+    # print('✿══════✿══════✿══════✿══════✿══════✿')
 
     if "children" in node['body']:
         for child in node['body']['children']:
-            traverse(child, node['id'])
+            traverse(child, new_node_id)
 
 
 def get_data_from_parent(url):
+    '''Обрабатывает ссылку на ветку и запускает копирование.'''
     mapid, nodeid = get_mapid_nodeid_from_link(url)
     branch_url = f'{BASE_URL}/maps/{mapid}/nodes/{nodeid}'
     response = requests.get(branch_url, auth=AUTH)
     if response.status_code == 200:
         response_data = response.json()
-        # Start traversal with the initial node and its parent
-        traverse(response_data, response_data.get('parent'))
+        new_parent_id = response_data.get('parent')
+        traverse(response_data, new_parent_id)
     else:
         print("Ошибка:", response.status_code, response.text)
 
 
-# https://beta.app.redforester.com/mindmap?mapid=c04981ec-9f3b-4234-a062-476b597e6587&nodeid=3c7d0d0b-c7c3-44f3-b0e5-7e450047567d
 if __name__ == '__main__':
     '''
     Сценарий:
@@ -170,13 +149,8 @@ if __name__ == '__main__':
         3.2 Если узел нонтайп, берем его заголовок и кидаем в ИИ
         3.3 Если узел не нонтайп, то копируем в другую ветку
     '''
-    # находим текст одного узла
-    # node_url = input("Введите URL узла: ")
-    # print('✿══════✿══════✿══════✿══════✿══════✿')
-    # get_text_from_single_node(node_url)
-
-    # находим текст ветки
     parent_url = input("Введите URL ветки: ")
     print('✿══════✿══════✿══════✿══════✿══════✿')
     get_data_from_parent(parent_url)
-    # test_post()
+    print('✿══════✿══════✿══════✿══════✿══════✿')
+    print('D O N E ✅')
