@@ -4,7 +4,8 @@ from tkinter import filedialog
 from bs4 import BeautifulSoup
 import re
 
-from app.constants import AUTH, BASE_URL
+from constants import AUTH, BASE_URL
+from claude_connection import send_message
 
 
 def get_node_data(node_url):
@@ -84,15 +85,16 @@ def copy_node_data(node, parent_id):
         return None
 
 
-def create_text_node(node, parent_id):
+def create_text_node(node, parent_id, prompt, text):
     '''Создает нонтайп узел в новом родителе.'''
+    ai_answer = send_message(prompt, text)
     body = {
         "map_id": node['map_id'],
         "parent": parent_id,
         "position": ["P", "0"],
         "properties": {
             "global": {
-                "title": 'это ответ ии',
+                "title": ai_answer,
             },
             "byUser": [],
             "byType": {},
@@ -110,24 +112,24 @@ def create_text_node(node, parent_id):
         return None
 
 
-def traverse(node, new_parent_id):
+def traverse(node, new_parent_id, prompt, text=None):
     '''Проходит по ветке и копирует ее зеркально.'''
     type_node = is_it_nontype_node(node)
     if type_node:
         new_node_id = copy_node_data(node, new_parent_id)
     else:
-        new_node_id = create_text_node(node, new_parent_id)
+        text = remove_html_tags(node["body"]["properties"]["global"]["title"])
+        new_node_id = create_text_node(node, new_parent_id, prompt, text)
     print(
         f'✿ {remove_html_tags(node["body"]["properties"]["global"]["title"])} ✅'
     )
-    # print('✿══════✿══════✿══════✿══════✿══════✿')
 
     if "children" in node['body']:
         for child in node['body']['children']:
-            traverse(child, new_node_id)
+            traverse(child, new_node_id, prompt)
 
 
-def get_data_from_parent(url):
+def get_data_from_parent(url, prompt_file):
     '''Обрабатывает ссылку на ветку и запускает копирование.'''
     mapid, nodeid = get_mapid_nodeid_from_link(url)
     branch_url = f'{BASE_URL}/maps/{mapid}/nodes/{nodeid}'
@@ -135,23 +137,25 @@ def get_data_from_parent(url):
     if response.status_code == 200:
         response_data = response.json()
         new_parent_id = response_data.get('parent')
-        traverse(response_data, new_parent_id)
+        traverse(response_data, new_parent_id, prompt_file)
     else:
         print("Ошибка:", response.status_code, response.text)
 
 
 def open_and_read_file():
+    print("Выберите файл с промтом: ")
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    root.destroy()
 
     if file_path:
         with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-            print(content)
+            return file.read()
+    return None
 
 
-if __name__ == '__main__':
+def main():
     '''
     Сценарий:
     1. Запрашиваем урл ветки
@@ -161,11 +165,14 @@ if __name__ == '__main__':
         3.2 Если узел нонтайп, берем его заголовок и кидаем в ИИ
         3.3 Если узел не нонтайп, то копируем в другую ветку
     '''
-    # parent_url = input("Введите URL ветки: ")
-    # promt_file = print("Выберите файл с промтом: ")
-    # print('✿══════✿══════✿══════✿══════✿══════✿')
-    # get_data_from_parent(parent_url)
-    # print('✿══════✿══════✿══════✿══════✿══════✿')
-    # print('D O N E ✅')
-    promt_file = print("Выберите файл с промтом: ")
-    open_and_read_file()
+    prompt_file = open_and_read_file()
+    parent_url = input("Введите URL ветки: ").strip()
+    print('✿══════✿══════✿══════✿══════✿══════✿')
+    get_data_from_parent(parent_url, prompt_file)
+    print('✿══════✿══════✿══════✿══════✿══════✿')
+    print('D O N E ✅')
+
+
+if __name__ == '__main__':
+    main()
+    # https://beta.app.redforester.com/mindmap?mapid=c04981ec-9f3b-4234-a062-476b597e6587&nodeid=a7edf1a3-3c6b-4ac3-a937-7cdecb56f194
