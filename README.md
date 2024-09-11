@@ -14,13 +14,13 @@
 git clone https://github.com/moritys/rf-export-to-gpt-and-back.git
 ```
 
-2. Создайте файл '.env' в корне проекта. Пример файла: 'example.env'
+2. Создайте файл '.env' в корне проекта. Пример наполнения файла в 'example.env'
 
 3. Создайте и запустите виртуальное окружение
 
 ``` bash
 python -m venv venv
-. venv/Scripts(bin)/activate
+. venv/Scripts(bin для linux)/activate
 ```
 
 4. Установите зависимости
@@ -37,5 +37,3 @@ python main.py
 ```
 
 6. Выберите файл с промтом и введите ссылку на ветку
-
-7. Результат будет в ветке ниже
