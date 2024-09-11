@@ -1,8 +1,12 @@
 from dotenv import load_dotenv
 import os
+import sys
 import hashlib
 
-load_dotenv()
+extDataDir = os.getcwd()
+if getattr(sys, 'frozen', False):
+    extDataDir = sys._MEIPASS
+load_dotenv(dotenv_path=os.path.join(extDataDir, '.env'))
 
 BASE_URL = 'https://app.redforester.com/api'
 
