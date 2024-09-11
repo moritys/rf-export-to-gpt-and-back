@@ -92,13 +92,13 @@ def copy_node_data(node, parent_id):
 def create_text_node(node, parent_id, prompt, text):
     '''Создает нонтайп узел в новом родителе.'''
     try:
-        # ai_answer = send_message(prompt, text)
+        ai_answer = send_message(prompt, text)
         body = {
             "map_id": node['map_id'],
             "parent": parent_id,
             "properties": {
                 "global": {
-                    "title": 'ai_answer',
+                    "title": ai_answer,
                 },
                 "byUser": [],
                 "byType": {},
@@ -182,5 +182,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+    finally:
+        input("Нажмите Enter, чтобы закрыть...")
 # https://beta.app.redforester.com/mindmap?mapid=c04981ec-9f3b-4234-a062-476b597e6587&nodeid=a7edf1a3-3c6b-4ac3-a937-7cdecb56f194
