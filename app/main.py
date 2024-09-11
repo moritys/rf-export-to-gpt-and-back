@@ -77,9 +77,9 @@ def copy_node_data(node, parent_id):
             "type_id": type_id,
             "properties": {
                 "global": node['body']['properties']['global'],
-                "byUser": node['body']['properties'].get('byUser', []),
-                "byType": node['body']['properties'].get('byType', {}),
-                "style": node['body']['properties'].get('style', {}),
+                # "byUser": node['body']['properties'].get('byUser', []),
+                # "byType": node['body']['properties'].get('byType', {}),
+                # "style": node['body']['properties'].get('style', {}),
             }
         }
         response = requests.post(f'{BASE_URL}/nodes', auth=AUTH, json=body)
@@ -92,13 +92,13 @@ def copy_node_data(node, parent_id):
 def create_text_node(node, parent_id, prompt, text):
     '''Создает нонтайп узел в новом родителе.'''
     try:
-        ai_answer = send_message(prompt, text)
+        # ai_answer = send_message(prompt, text)
         body = {
             "map_id": node['map_id'],
             "parent": parent_id,
             "properties": {
                 "global": {
-                    "title": ai_answer,
+                    "title": 'ai_answer',
                 },
                 "byUser": [],
                 "byType": {},
